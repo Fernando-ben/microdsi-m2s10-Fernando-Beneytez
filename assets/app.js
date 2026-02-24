@@ -17,14 +17,12 @@ function getTrack() {
 }
 function setTrack(t) {
   localStorage.setItem("track", t);
-  // si NO viene por URL, refrescamos para re-render
   const u = new URL(window.location.href);
   if (!u.searchParams.get("track")) location.reload();
 }
 
 // =====================
-// Micro-lecciones (M2-S10)
-// Cada lesson tiene examples por track
+// Micro-lecciones (M2-S10) + Extensiones Opcionales
 // =====================
 const LESSONS = [
   {
@@ -148,6 +146,30 @@ const LESSONS = [
     },
     check: "Propón 1 palanca IA + 1 control (HITL/auditoría/RBAC/minimización).",
   },
+  // --- EXTENSIÓN OPCIONAL: 2 TARJETAS NUEVAS ---
+  {
+    tag: "M2-S10 · MVP",
+    title: "Producto Mínimo Viable (MVP)",
+    text: "Enfócate en la funcionalidad core que aporta el 80% del valor. Deja los edge cases para iteraciones futuras.",
+    examples: {
+      itsm: ["MVP: Triage automático solo para tickets de baja severidad"],
+      hr:   ["MVP: Autorespuesta para FAQs de nómina básicas"],
+      proc: ["MVP: Validación automatizada solo para proveedores nacionales"],
+    },
+    check: "Define qué funcionalidad será el corazón de tu MVP.",
+  },
+  {
+    tag: "M2-S10 · Mejora Continua",
+    title: "Iteración tras el despliegue",
+    text: "El proceso no termina en el TO-BE. Monitoriza el nuevo baseline y recoge feedback real de los usuarios.",
+    examples: {
+      itsm: ["Revisión semanal de falsos positivos en triage IA"],
+      hr:   ["Encuesta de satisfacción de 1 clic al cerrar solicitud"],
+      proc: ["Auditoría mensual de los tiempos de aprobación del ERP"],
+    },
+    check: "Propón 1 mecanismo para recoger feedback post-despliegue.",
+  },
+  // ---------------------------------------------
   {
     tag: "Puente a M2-S11",
     title: "Salida del día: candidato + baseline + SIPOC",
@@ -162,7 +184,7 @@ const LESSONS = [
 ];
 
 // =====================
-// Pistas (caso guiado) por track
+// Pistas (caso guiado) por track + Extensión "No-alcance"
 // =====================
 const PISTA_STEPS = {
   itsm: [
@@ -171,6 +193,7 @@ const PISTA_STEPS = {
     { t:"Dolores AS-IS", b:"Misrouting, KB desactualizada, escalados innecesarios, P1 críticos.", q:"Marca 2 dolores medibles y 1 evidencia."},
     { t:"Prioriza", b:"Impacto alto si volumen alto; riesgo por P1 y auditoría.", q:"Puntúa Impacto/Esfuerzo/Riesgo (1–5) y explica."},
     { t:"SIPOC", b:"Cierra límites del proceso para evitar scope creep.", q:"Completa Suppliers/Inputs/Process(4–6)/Outputs/Customers."},
+    { t:"No-alcance", b:"Define qué queda fuera del MVP.", q:"Escribe 2 cosas que NO harías en el primer rediseño."} 
   ],
   hr: [
     { t:"HR · Objetivo", b:"Responder solicitudes con PII minimizada y auditoría.", q:"¿Qué tipo de solicitudes entran y cuáles NO?"},
@@ -178,6 +201,7 @@ const PISTA_STEPS = {
     { t:"Riesgo PII", b:"Aquí el riesgo manda el diseño: RBAC, minimización, logs.", q:"¿Qué input contiene PII y cómo lo minimizas?"},
     { t:"Prioriza", b:"No priorices solo por volumen: penaliza riesgo alto.", q:"Puntúa Impacto/Esfuerzo/Riesgo y justifica."},
     { t:"SIPOC", b:"Contrato mínimo antes de rediseñar.", q:"Completa SIPOC y añade 1 control (auditoría/HITL/RBAC)."},
+    { t:"No-alcance", b:"Define límites claros para no sobrecargar el MVP.", q:"Escribe 2 cosas que quedan fuera."} 
   ],
   proc: [
     { t:"Procurement · Objetivo", b:"Reducir lead time de alta proveedor y rechazos por docs incompletos.", q:"¿Qué output define ‘alta exitosa’?"},
@@ -185,6 +209,7 @@ const PISTA_STEPS = {
     { t:"Dolores AS-IS", b:"Ida y vuelta por documentos, aprobaciones opacas, dependencia ERP.", q:"Marca 2 dolores y 1 dependencia clave."},
     { t:"Prioriza", b:"Alto impacto, alto esfuerzo: exige MVP y no-alcance.", q:"Puntúa Impacto/Esfuerzo/Riesgo y explica el trade-off."},
     { t:"SIPOC", b:"Contrato mínimo + compliance.", q:"Completa SIPOC e indica dónde entra auditoría/aprobación."},
+    { t:"No-alcance", b:"Evita el scope creep desde el día 1.", q:"Escribe 2 excepciones que seguirán siendo manuales."} 
   ],
 };
 
@@ -228,7 +253,7 @@ function renderFeed(){
   if(!wrap) return;
 
   const t = getTrack();
-  wrap.innerHTML = ""; // re-render limpio
+  wrap.innerHTML = ""; 
 
   LESSONS.forEach((L, idx) => {
     const snap = el("section","cardSnap");
@@ -262,7 +287,6 @@ function renderFeed(){
     main.appendChild(p);
     main.appendChild(call);
 
-    // Side blocks: ejemplos del track actual
     const ex = el("div","sideBlock");
     const exH = el("h4"); exH.textContent = `Ejemplo · ${TRACKS.find(x=>x.id===t).name}`;
     const ul = el("ul");
@@ -335,7 +359,7 @@ function setupPista(){
 }
 
 // =====================
-// Lab export
+// Lab export + Extensión Trade-off (Versión Mejorada/Bonita)
 // =====================
 function exportLabToMarkdown(){
   const out = $("#mdOut");
@@ -346,20 +370,61 @@ function exportLabToMarkdown(){
   const t = getTrack();
   const tName = TRACKS.find(x=>x.id===t)?.name || t;
 
+  // 1. Convertir Inventario en una lista con viñetas
+  let invFormatted = "_(vacío)_";
+  if (inv) {
+    invFormatted = inv.split('\n')
+                      .map(line => line.trim() ? `- ${line.trim()}` : '')
+                      .filter(Boolean)
+                      .join('\n');
+  }
+
+  // 2. Convertir la Priorización en una Tabla Markdown real
+  let prFormatted = "_(vacío)_";
+  if (pr) {
+    const rows = pr.split('\n').filter(line => line.trim() !== '');
+    prFormatted = "| Proceso | Impacto | Esfuerzo | Riesgo | Score | Nota |\n";
+    prFormatted += "|---|:---:|:---:|:---:|:---:|---|\n";
+    rows.forEach(row => {
+      let cells = row.split('|').map(c => c.trim());
+      if(cells.length > 0) {
+         prFormatted += `| ${cells.join(' | ')} |\n`;
+      }
+    });
+  }
+
+  // 3. Poner en negrita las palabras clave del SIPOC automáticamente
+  let sipFormatted = "_(vacío)_";
+  if (sip) {
+    sipFormatted = sip
+      .replace(/Suppliers:/gi, "**Suppliers:**")
+      .replace(/Inputs:/gi, "**Inputs:**")
+      .replace(/Process:/gi, "**Process:**")
+      .replace(/Outputs:/gi, "**Outputs:**")
+      .replace(/Customers:/gi, "**Customers:**");
+  }
+
+  // 4. Construir el documento final con emojis y separadores
   const md = [
-    `# M2-S10 · Entregable rápido · ${tName}`,
+    `# 🎯 M2-S10 · Entregable rápido · ${tName}`,
     "",
-    "## Inventario (L1)",
-    inv ? inv : "_(vacío)_",
+    "---",
     "",
-    "## Priorización (Impacto/Esfuerzo/Riesgo)",
-    pr ? pr : "_(vacío)_",
+    "## 📋 1. Inventario (L1)",
+    invFormatted,
     "",
-    "## SIPOC",
-    sip ? sip : "_(vacío)_",
+    "## ⚖️ 2. Priorización (Impacto / Esfuerzo / Riesgo)",
+    prFormatted,
     "",
-    "## Nota (trade-off)",
-    "_(2 criterios numéricos + 1 restricción)_"
+    "## 🧾 3. SIPOC",
+    sipFormatted,
+    "",
+    "---",
+    "",
+    "## 💡 4. Nota y Trade-off principal",
+    "> **Trade-off principal:** Sacrificamos la automatización total (0-touch) a cambio de mantener control humano en los permisos que requieren revisión de justificantes médicos.",
+    "> ",
+    "> **Restricción dominante:** Minimización y control de acceso a PII (datos de salud y familiares en los adjuntos)."
   ].join("\n");
 
   out.value = md;
@@ -378,14 +443,9 @@ function downloadText(filename, text){
 // =====================
 document.addEventListener("DOMContentLoaded", ()=>{
   ensureTrackSelector();
-
-  // Feed
   if($("#feedWrap")) renderFeed();
-
-  // Pistas
   setupPista();
 
-  // Lab
   const exp = $("#btnExport");
   if(exp) exp.addEventListener("click", exportLabToMarkdown);
 
